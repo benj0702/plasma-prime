@@ -9,140 +9,17 @@ from eth_utils import encode_hex as encode_hex_0x
 from eth_utils import (
     int_to_big_endian,
 )
-# import json
-
-from pprint import PrettyPrinter
-PP = PrettyPrinter(indent=4)
 
 
-class MST:
-    def __init__(self, l, r):
-        self.l = l
-        self.r = r
-        self.h = Web3.sha3(l.h + r.h)
+def int_to_big_endian_of_size(size):
+    def justified_big_endian(val):
+        return int_to_big_endian(val).rjust(size, b'\0')
+    return justified_big_endian
 
-class Leaf:
-    def __init__(self, tx):
-        self.tx = tx
-        self.h = tx.h
-
-class Msg:
-    def __init__(self, sender, recipient, start, offset):
-        self.sender = sender
-        self.recipient = recipient
-        self.start = start
-        self.offset = offset
-        self.h = Web3.sha3(
-            addr_to_bytes(self.sender) +
-            addr_to_bytes(self.recipient) +
-            to_bytes32(self.start) +
-            to_bytes32(self.offset)
-        )
-
-    def plaintext(self):
-        return addr_to_bytes(self.sender) + addr_to_bytes(self.recipient) + to_bytes32(self.start) + to_bytes32(self.offset) + self.h
-
-
-class Swap:
-    def __init__(self, msgs):
-        self.msgs = msgs
-        self.raw_hashes = b''
-        for m in msgs:
-            self.raw_hashes += m.h
-        self.h = Web3.sha3(
-            self.raw_hashes
-        )
-
-class Deposit:
-    # TODO: Add multi-asset support
-    def __init__(self, owner, amount):
-        self.owner = owner
-        self.offset = amount
-
-class Tx:
-    # TODO: Add tx timeout to avoid free option problem
-    def __init__(self, msg, swap, signer):
-        self.msg = msg
-        self.sender = msg.sender
-        self.recipient = msg.recipient
-        self.start = msg.start
-        self.offset = msg.offset
-        self.swap = swap
-        if swap is not None:
-            assert msg.h in swap.raw_hashes
-            self.full_msg_hash = swap.h
-            self.is_swap = True
-        else:
-            self.full_msg_hash = msg.h
-            self.is_swap = False
-        # self.sig = signer(msg.h)
-        sig = signer(self.full_msg_hash)
-        self.sigv = sig.v
-        self.sigr = sig.r
-        self.sigs = sig.s
-        self.h = Web3.sha3(
-            self.full_msg_hash +
-            to_bytes32(self.sigv) +
-            to_bytes32(self.sigr) +
-            to_bytes32(self.sigs)
-        )
-
-    def plaintext(self):
-        plaintext = b''
-        if self.swap is not None:
-            for msg in self.swap.msgs:
-                plaintext += msg.plaintext()
-        else:
-            plaintext += self.msg.plaintext()
-        plaintext += self.h + to_bytes32(self.sigv) + to_bytes32(self.sigr) + to_bytes32(self.sigs)
-        return plaintext
-
-    # def json(self):
-    #     return json.dumps(self, default=lambda o: o.__dict__)
-
-class NullTx:
-    def __init__(self, start, offset):
-        self.sender = '0xdead'
-        self.recipient = '0xdead'
-        self.start = start
-        self.offset = offset
-        self.is_swap = False
-        self.h = Web3.sha3(
-            addr_to_bytes(self.sender) +
-            addr_to_bytes(self.recipient) +
-            to_bytes32(self.start) +
-            to_bytes32(self.offset)
-        )
-
-    def plaintext(self):
-        return b'null'
-
-def pairs(l):
-    return [(l[i], l[i + 1]) for i in range(0, len(l), 2)]
-
-# assumes no overlapping txs
-def construct_tree(txs):
-    depth = ceil(log(len(txs), 2))
-    assert depth <= MAX_TREE_DEPTH
-
-    leaves = [Leaf(tx) for tx in txs]
-    leaves.sort(key = lambda leaf: leaf.tx.msg.start)
-    leaves += [Leaf(NullTx())] * (2 ** depth - len(leaves))
-
-    fst = lambda x: x[0]
-    snd = lambda x: x[1]
-    nodes = leaves
-    # depth = 1
-    for i in range(depth):
-        nodes = list(map(lambda x: MST(fst(x), snd(x)), pairs(nodes)))
-    return nodes[0]
-
-
-def int_to_big_endian32(val):
-    return int_to_big_endian(val).rjust(32, b'\0')
-
-def int_to_big_endian8(val):
-    return int_to_big_endian(val).rjust(8, b'\0')
+int_to_big_endian4 = int_to_big_endian_of_size(4)
+int_to_big_endian8 = int_to_big_endian_of_size(8)
+int_to_big_endian12 = int_to_big_endian_of_size(12)
+int_to_big_endian32 = int_to_big_endian_of_size(32)
 
 def addr_to_bytes(addr):
     return bytes.fromhex(addr[2:])

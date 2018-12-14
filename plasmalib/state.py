@@ -38,6 +38,7 @@ def get_owner_to_start_key(owner, token_id, start):
     assert type(owner) == bytes and type(token_id) == bytes and type(start) == bytes
     return owner + token_id + start
 
+
 class FileLog:
     def __init__(self, log_dir, backup_timeout):
         self.log_dir = log_dir
@@ -169,17 +170,17 @@ class State:
 
     def add_transfer(self, transfer, affected_ranges):
         sender, recipient, token_id, start, offset = self.get_converted_parameters(addresses=(transfer.sender, transfer.recipient), bytes8s=(transfer.token_id,), bytes32s=(transfer.start, transfer.offset))
-        end = token_id + int_to_big_endian32(big_endian_to_int(start) + big_endian_to_int(offset)) + OFFSET_SUFFIX
+        end = token_id + int_to_big_endian32(big_endian_to_int(start) + big_endian_to_int(offset) + 1) + OFFSET_SUFFIX
         # Shorten first range if needed
         if get_start_to_offset_key(token_id, start) != affected_ranges[0]:
             # TODO: Add
             self.db.put(affected_ranges[0], int_to_big_endian32(big_endian_to_int(start) - big_endian_to_int(affected_ranges[0][8:40])))
-            print('setting new end offset to:', big_endian_to_int(start) - big_endian_to_int(affected_ranges[0][8:40]))
+            print('setting new offset to:', big_endian_to_int(start) - big_endian_to_int(affected_ranges[0][8:40]))
             del affected_ranges[0:2]
         # Shorten last range if needed
         if len(affected_ranges) != 0 and end != affected_ranges[-1]:
             self.db.put(affected_ranges[-2], start + offset)
-            print('setting new start to:', big_endian_to_int(start) + big_endian_to_int(offset))
+            print('setting new start to:', big_endian_to_int(end[8:40]))
             del affected_ranges[-2:]
 
         # # Check that affected ranges are owned by the sender

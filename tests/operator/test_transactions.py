@@ -9,8 +9,8 @@ from plasmalib.operator.transactions import (
 def test_transactions():
     sender = Web3.sha3(1)[2:22]
     recipient = Web3.sha3(2)[2:22]
-    tr1 = TransferRecord(sender, recipient, 0, 300, 300, 10, 0, 3)
-    tr2 = TransferRecord(recipient, sender, 0, 100, 100, 10, 0, 3)
+    tr1 = TransferRecord(sender, recipient, 0, 300, 300, 10)
+    tr2 = TransferRecord(recipient, sender, 0, 100, 100, 10)
     sig1 = Signature(0, 1, 2)
     sig2 = Signature(3, 4, 5)
     tr1_encoding = tr1.encode()
@@ -31,4 +31,4 @@ def test_transactions():
 def test_transaction_type_checking():
     sender = Web3.sha3(1)[2:22]
     recipient = Web3.sha3(2)[2:22]
-    TransferRecord(sender, recipient, 0, 300, 300, 10, 0, 3)
+    TransferRecord(sender, recipient, 0, 300, 300, 10)

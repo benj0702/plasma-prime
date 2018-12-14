@@ -13,16 +13,15 @@ list_len + TransferRecord_1 + ... + TransferRecord_n + list_len + Signature_1 + 
 - TransferRecord [152 bytes]: 152 bytes per TransferRecord, up to `x` TransferRecords in each TX.
 - Signature [96 bytes]: 96 bytes per signature.
 
-transfer_fields = [
+fields = [
     ('sender', Web3.isAddress),
     ('recipient', Web3.isAddress),
-    ('token_id', is_bytes8_int),
-    ('start', is_bytes32_int),
-    ('offset', is_bytes32_int),
-    ('max_block', is_bytes32_int),
-    ('nonce', is_bytes8_int),
-    ('prime', is_bytes8_int),
+    ('token_type', is_bytes4_int),
+    ('start', is_bytes12_int),
+    ('offset', is_bytes12_int),
+    ('block', is_bytes12_int),
 ]
+
 sig_fields = [
     ('v', is_bytes32_int),
     ('r', is_bytes32_int),
@@ -30,27 +29,28 @@ sig_fields = [
 ]
 '''
 
-def is_bytes32_int(i):
-    b = int_to_big_endian(i)
-    if len(b) <= 32:
-        return True
-    else:
-        return False
+def is_bytes_an_int_of_size(max_bytes):
+    def check_size(i):
+        b = int_to_big_endian(i)
+        if len(b) <= max_bytes:
+            return max_bytes
+        else:
+            return False
+    return check_size
 
-def is_bytes8_int(i):
-    b = int_to_big_endian(i)
-    if len(b) <= 8:
-        return True
-    else:
-        return False
+is_bytes32_int = is_bytes_an_int_of_size(32)
+is_bytes12_int = is_bytes_an_int_of_size(12)
+is_bytes4_int = is_bytes_an_int_of_size(4)
 
 def get_field_bytes(field):
     if field == Web3.isAddress:
         return 20
     elif field == is_bytes32_int:
         return 32
-    elif field == is_bytes8_int:
-        return 8
+    elif field == is_bytes12_int:
+        return 12
+    elif field == is_bytes4_int:
+        return 4
     else:
         raise 'No field type checker recognized'
 
@@ -81,8 +81,12 @@ class SimpleSerializableElement:
                 encoding += field_value
             elif field_type == is_bytes32_int:
                 encoding += int_to_big_endian(field_value).rjust(32, b'\0')
-            elif field_type == is_bytes8_int:
-                encoding += int_to_big_endian(field_value).rjust(8, b'\0')
+            elif field_type == is_bytes12_int:
+                encoding += int_to_big_endian(field_value).rjust(12, b'\0')
+            elif field_type == is_bytes4_int:
+                encoding += int_to_big_endian(field_value).rjust(4, b'\0')
+            else:
+                raise Exception('No known type detected')
         return encoding
 
     @classmethod
@@ -94,7 +98,7 @@ class SimpleSerializableElement:
         for f in element_type.fields:
             field_type = f[1]
             field_bytes_len = get_field_bytes(field_type)
-            if field_type == is_bytes8_int or field_type == is_bytes32_int:
+            if field_type == is_bytes32_int or field_type == is_bytes12_int or field_type == is_bytes4_int:
                 args += (big_endian_to_int(encoding[byte_pos:byte_pos+field_bytes_len]),)
             else:
                 args += (encoding[byte_pos:byte_pos+field_bytes_len],)
@@ -140,12 +144,10 @@ class TransferRecord(SimpleSerializableElement):
     fields = [
         ('sender', Web3.isAddress),
         ('recipient', Web3.isAddress),
-        ('token_id', is_bytes8_int),
-        ('start', is_bytes32_int),
-        ('offset', is_bytes32_int),
-        ('max_block', is_bytes32_int),
-        ('nonce', is_bytes8_int),
-        ('prime', is_bytes8_int),
+        ('token_type', is_bytes4_int),
+        ('start', is_bytes12_int),
+        ('offset', is_bytes12_int),
+        ('block', is_bytes12_int),
     ]
 
     @property

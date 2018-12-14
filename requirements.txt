@@ -3,3 +3,4 @@ py-evm==0.2.0a33
 eth-tester[py-evm]==0.1.0b33
 vyper==0.1.0b4
 pytest
+plyvel==1.0.5
